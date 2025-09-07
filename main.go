@@ -70,6 +70,7 @@ func main() {
 				func(response http.ResponseWriter, request *http.Request) {
 					if strings.Contains(request.Header.Get("content-type"), "application/grpc") {
 						grpcServer.ServeHTTP(response, request)
+						return
 					}
 
 					privateRouter.ServeHTTP(response, request)
