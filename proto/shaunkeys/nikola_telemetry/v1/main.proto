@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package shaunkeys.nikola_telemetry.v1;
+
+// This service provides functions for various processes involving registration
+// with the Tesla API.
+// NOTE: This service may be removed. Ideally, it should be automated.
+service ApiRegistrationService {
+  // Registers the application with the Tesla Fleet API
+  rpc RegisterApplication(RegisterApplicationRequest) returns (RegisterApplicationResponse);
+}
+
+message RegisterApplicationRequest {}
+message RegisterApplicationResponse {}

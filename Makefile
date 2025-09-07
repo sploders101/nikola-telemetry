@@ -1,11 +1,19 @@
-default: out/tesla-operator
+default: out/nikola-telemetry
 .PHONY: clean default run
 
-out:
-	@mkdir out
+GO_FILES = $(shell find . -name '*.go')
+PROTO_FILES = $(shell find proto -name '*.proto')
 
-out/tesla-operator: out **/*.go
-	@go build -o out ./bin/tesla-operator
+out:
+	mkdir out
+
+out/nikola-telemetry: out gen/.sentinel $(GO_FILES)
+	go build -o out .
+
+gen/.sentinel: $(PROTO_FILES)
+	buf generate
+	touch gen/.sentinel
 
 clean:
-	@rm -r out
+	rm -r out
+	rm -r gen
