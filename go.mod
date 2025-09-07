@@ -3,6 +3,8 @@ module github.com/sploders101/nikola-telemetry
 go 1.24.4
 
 require (
+	github.com/google/uuid v1.6.0
+	github.com/mattn/go-sqlite3 v1.14.32
 	golang.org/x/net v0.41.0
 	google.golang.org/grpc v1.75.0
 	google.golang.org/protobuf v1.36.8

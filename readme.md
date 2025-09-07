@@ -20,6 +20,7 @@ configuration file:
 
 ```json
 {
+  "DbPath": "./database.sqlite",
 	"PublicAddress": ":8080",
 	"PrivateAddress": ":8081",
 	"Domain": "nikola-telemetry-test.shaunkeys.com",

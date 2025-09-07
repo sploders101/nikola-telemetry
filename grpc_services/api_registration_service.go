@@ -12,6 +12,7 @@ import (
 
 	"google.golang.org/grpc"
 
+	"github.com/sploders101/nikola-telemetry/dbapi"
 	pb "github.com/sploders101/nikola-telemetry/gen/shaunkeys/nikola_telemetry/v1"
 	"github.com/sploders101/nikola-telemetry/helpers/config"
 	"github.com/sploders101/nikola-telemetry/helpers/tokens"
@@ -20,8 +21,10 @@ import (
 type ApiRegistrationService struct {
 	pb.UnsafeApiRegistrationServiceServer
 
-	config       config.ConfigFile
-	tokenManager *tokens.TokenManager
+	db            dbapi.Db
+	config        config.ConfigFile
+	clientManager tokens.ClientManager
+	tokenManager  *tokens.TokenManager
 }
 
 func (self ApiRegistrationService) RegisterApplication(
@@ -73,12 +76,62 @@ func (self ApiRegistrationService) RegisterApplication(
 		return nil, fmt.Errorf("Tesla replied with status %v.", httpResp.StatusCode)
 	}
 
-	return &pb.RegisterApplicationResponse{}, nil
+	return pb.RegisterApplicationResponse_builder{}.Build(), nil
 }
 
-func AddApiRegistrationService(server *grpc.Server, config config.ConfigFile, tokenManager *tokens.TokenManager) {
+func (self ApiRegistrationService) RegisterUser(
+	_ context.Context,
+	request *pb.RegisterUserRequest,
+) (*pb.RegisterUserResponse, error) {
+	user := dbapi.UserDetails{Username: request.GetUsername()}
+	if err := self.db.AddUser(&user); err != nil {
+		slog.Error("Failed to add user to db.", "error", err.Error())
+		return nil, fmt.Errorf("Failed to add user to db: %w", err)
+	}
+
+	clientId, err := self.clientManager.GetClientId()
+	if err != nil {
+		return nil, err
+	}
+
+	redirectUri := fmt.Sprintf("https://%s/oauth/redirect/tesla", self.config.Domain)
+
+	params := url.Values{}
+	params.Add("response_type", "code")
+	params.Add("client_id", clientId)
+	params.Add("redirect_uri", redirectUri)
+	params.Add("scope", "openid offline_access user_data vehicle_device_data vehicle_cmds vehicle_charging_cmds")
+	params.Add("state", user.RegistrationCode)
+	params.Add("show_keypair_step", "true")
+
+	return pb.RegisterUserResponse_builder{
+		UserId:           user.Id,
+		RegistrationCode: user.RegistrationCode,
+		RegistrationUrl:  fmt.Sprintf("https://auth.tesla.com/oauth2/v3/authorize?%s", params.Encode()),
+	}.Build(), nil
+}
+
+func (self ApiRegistrationService) DeleteUser(
+	_ context.Context,
+	request *pb.DeleteUserRequest,
+) (*pb.DeleteUserResponse, error) {
+	if err := self.db.DeleteUser(request.GetUserId()); err != nil {
+		return nil, err
+	}
+	return pb.DeleteUserResponse_builder{}.Build(), nil
+}
+
+func AddApiRegistrationService(
+	server *grpc.Server,
+	config config.ConfigFile,
+	db dbapi.Db,
+	clientManager tokens.ClientManager,
+	tokenManager *tokens.TokenManager,
+) {
 	pb.RegisterApiRegistrationServiceServer(server, ApiRegistrationService{
-		config:       config,
-		tokenManager: tokenManager,
+		db:            db,
+		config:        config,
+		clientManager: clientManager,
+		tokenManager:  tokenManager,
 	})
 }

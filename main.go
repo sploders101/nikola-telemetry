@@ -12,21 +12,36 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
+	"github.com/sploders101/nikola-telemetry/dbapi"
 	"github.com/sploders101/nikola-telemetry/grpc_services"
 	"github.com/sploders101/nikola-telemetry/helpers/config"
 	"github.com/sploders101/nikola-telemetry/helpers/tokens"
 )
 
 func main() {
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	slog.SetDefault(logger)
-
+	// Read config
 	config, err := config.LoadConfig()
 	if err != nil {
 		slog.Error("Failed to load config.", "error", err.Error())
 		os.Exit(1)
 	}
 
+	// Set up logging
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	slog.SetDefault(logger)
+
+	// Set up database
+	db, err := dbapi.NewDb(config)
+	if err != nil {
+		slog.Error("An error occurred while opening the db.", "error", err.Error())
+		os.Exit(1)
+	}
+
+	// Create state managers
+	clientManager := tokens.NewClientManager(config)
+	tokenManager := tokens.NewTokenManager(config, clientManager)
+
+	// Set up routers
 	privateRouter := http.NewServeMux()
 	var publicRouter *http.ServeMux
 	if config.PublicAddress != nil {
@@ -35,6 +50,7 @@ func main() {
 		publicRouter = http.NewServeMux()
 	}
 
+	// Add routes
 	if err := addPublicRoutes(config, publicRouter); err != nil {
 		slog.Error("Failed to load config.", "error", err.Error())
 		os.Exit(1)
@@ -44,12 +60,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	tokenManager := tokens.NewTokenManager(config)
-
+	// Set up gRPC server & services
 	grpcServer := grpc.NewServer()
-	grpc_services.AddApiRegistrationService(grpcServer, config, tokenManager)
+	grpc_services.AddApiRegistrationService(grpcServer, config, db, clientManager, tokenManager)
 	reflection.Register(grpcServer)
 
+	// Listen for public routes on public address if one is configured
+	// If public address was not configured, public routes were added to the private router.
 	if config.PublicAddress != nil {
 		go func() {
 			slog.Info("Listening on public address.", "address", config.PublicAddress)
@@ -61,6 +78,9 @@ func main() {
 		}()
 	}
 
+	// Listen for private routes & gRPC calls on private router.
+	// h2c makes this a little more complicated here. I think this should eventually be e2e encrypted,
+	// so this will likely be changed in the future.
 	slog.Info("Listening on private address.", "address", config.PrivateAddress)
 	h2s := &http2.Server{}
 	server := http.Server{
@@ -89,6 +109,7 @@ func main() {
 	}
 }
 
+// Adds public HTTP routes to the given router.
 func addPublicRoutes(config config.ConfigFile, router *http.ServeMux) error {
 	router.HandleFunc(
 		"GET /.well-known/appspecific/com.tesla.3p.public-key.pem",
@@ -100,6 +121,7 @@ func addPublicRoutes(config config.ConfigFile, router *http.ServeMux) error {
 	return nil
 }
 
+// Adds private HTTP routes to the given router.
 func addPrivateRoutes(config config.ConfigFile, router *http.ServeMux) error {
 	return nil
 }

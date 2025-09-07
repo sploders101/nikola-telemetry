@@ -6,25 +6,25 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"os"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/sploders101/nikola-telemetry/helpers/config"
 )
 
-func NewTokenManager(config config.ConfigFile) *TokenManager {
-	return &TokenManager{
-		config: config,
-	}
-}
-
 type TokenManager struct {
 	config          config.ConfigFile
+	clientManager   ClientManager
 	mutex           sync.Mutex
 	activeToken     string
 	tokenExpiration time.Time
+}
+
+func NewTokenManager(config config.ConfigFile, clientManager ClientManager) *TokenManager {
+	return &TokenManager{
+		config: config,
+		clientManager: clientManager,
+	}
 }
 
 func (self *TokenManager) GetPartnerToken() (string, error) {
@@ -34,17 +34,15 @@ func (self *TokenManager) GetPartnerToken() (string, error) {
 		return self.activeToken, nil
 	}
 
-	clientIdRaw, err := os.ReadFile(self.config.TeslaClientIdFile)
+	clientId, err := self.clientManager.GetClientId()
 	if err != nil {
-		return "", fmt.Errorf("Error reading client ID: %w", err)
+		return "", err
 	}
-	clientId := strings.TrimSpace(string(clientIdRaw))
 
-	clientSecretRaw, err := os.ReadFile(self.config.TeslaClientSecretFile)
+	clientSecret, err := self.clientManager.GetClientSecret()
 	if err != nil {
-		return "", fmt.Errorf("Error reading client secret: %w", err)
+		return "", err
 	}
-	clientSecret := strings.TrimSpace(string(clientSecretRaw))
 
 	response, err := http.PostForm(*self.config.TeslaRegistrationUrl, url.Values(map[string][]string{
 		"grant_type":    {"client_credentials"},

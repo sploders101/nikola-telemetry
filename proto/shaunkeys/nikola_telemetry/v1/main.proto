@@ -8,7 +8,33 @@ package shaunkeys.nikola_telemetry.v1;
 service ApiRegistrationService {
   // Registers the application with the Tesla Fleet API
   rpc RegisterApplication(RegisterApplicationRequest) returns (RegisterApplicationResponse);
+
+  // Registers a new user with the application
+  rpc RegisterUser(RegisterUserRequest) returns (RegisterUserResponse);
+
+  // Deletes a user from the application
+  rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse);
 }
 
 message RegisterApplicationRequest {}
 message RegisterApplicationResponse {}
+
+message RegisterUserRequest {
+  string username = 1;
+}
+message RegisterUserResponse {
+  // The user's internal ID used within the database. Not meant for public consumption.
+  int64 user_id = 1;
+
+  // A temporary code that represents the user until they have registered
+  // with their Tesla account.
+  string registration_code = 2;
+
+  // The full URL the user must go to in order to link their Tesla account.
+  string registration_url = 3;
+}
+
+message DeleteUserRequest {
+  int64 user_id = 1;
+}
+message DeleteUserResponse {}

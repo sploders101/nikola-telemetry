@@ -11,6 +11,9 @@ type ConfigFile struct {
 	// If unset, this will default to the parent directory of the config.
 	BasePath *string
 
+	// The path to the sqlite database. This may be changed for more options later.
+	DbPath string
+
 	// The listening address for data that should be hosted publicly
 	// (namely the `.well-known` folder). If this is null, the private
 	// address will be used for all hosting. Please make sure to whitelist
