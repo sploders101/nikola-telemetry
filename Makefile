@@ -12,7 +12,7 @@ out/nikola-telemetry: out gen/.sentinel $(GO_FILES)
 
 gen/.sentinel: $(PROTO_FILES)
 	buf generate
-	touch gen/.sentinel
+	@touch gen/.sentinel
 
 clean:
 	rm -r out
