@@ -12,6 +12,38 @@ the telemetry service (aka "Streaming Signals") so you can focus on your
 application or integration.
 
 
+## Configuration
+
+The path to the configuration file defaults to `./config/config.json`, but can
+be changed using the `CONFIG_PATH` environment variable. Here is an example
+configuration file:
+
+```json
+{
+	"PublicAddress": ":8080",
+	"PrivateAddress": ":8081",
+	"Domain": "nikola-telemetry-test.shaunkeys.com",
+	"TeslaRegistrationUrl": "https://fleet-auth.prd.vn.cloud.tesla.com/oauth2/v3/token",
+	"TeslaBaseUrl": "https://fleet-api.prd.na.vn.cloud.tesla.com",
+	"TeslaPrivkeyFile": "./secrets/private-key.pem",
+	"TeslaPubkeyFile": "./secrets/public-key.pem",
+	"TeslaClientIdFile": "./secrets/client-id.txt",
+	"TeslaClientSecretFile": "./secrets/client-secret.txt"
+}
+```
+
+
+### Relative path behavior
+
+Note that by default all relative file paths are in relation to the config file
+itself, not the working directory of the application. This can be overridden
+using the `BasePath` option. For example, setting `BasePath` to
+`/path/to/my/files` will set an absolute path as the reference point for all
+files referenced in the config. However, relative paths in `BasePath` will be
+respected, so setting `BasePath` to `.` will make all paths relative to the
+current working directory of the application, rather than the config file.
+
+
 ## Why the name?
 
 Since this is a personal project, and I am not offering a service of any kind,

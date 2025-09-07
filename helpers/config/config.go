@@ -44,7 +44,7 @@ type ConfigFile struct {
 }
 
 func LoadConfig() (ConfigFile, error) {
-	filePath := "./config.json"
+	filePath := "./config/config.json"
 	if env := os.Getenv("CONFIG_PATH"); env != "" {
 		filePath = env
 	}
